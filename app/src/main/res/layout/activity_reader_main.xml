@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context="com.meizu.media.reader.test.ReaderMainActivity">
+
+    <com.meizu.media.reader.widget.DragGridView
+        android:id="@+id/grid_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:numColumns="4"
+        android:gravity="center"
+        android:scrollbars="vertical"
+        android:scrollbarStyle="outsideOverlay"
+        android:padding="@dimen/common_5dp"
+        tools:layout_editor_absoluteY="8dp"
+        tools:layout_editor_absoluteX="8dp">
+    </com.meizu.media.reader.widget.DragGridView>
+
+</android.support.constraint.ConstraintLayout>
