@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Point;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -15,6 +14,7 @@ import android.widget.GridView;
 import android.widget.ListAdapter;
 
 import com.meizu.media.reader.test.R;
+import com.orhanobut.logger.Logger;
 
 /**
  * 可拖动排序的GridView
@@ -24,15 +24,19 @@ import com.meizu.media.reader.test.R;
 
 public class DragGridView extends GridView implements AdapterView.OnItemLongClickListener{
 
-    private static final String TAG = "DragGridView";
+    // 停留时间超过100毫秒，触发滑动
+    private int triggerDragTime = 100;
     private float mStartedTouchX;
     private float mStartedTouchY;
     private int mTargetPos;
     private int mTempPos;
-    private boolean isDraging;    // 判断是否正在滑动
+    // 判断是否正在滑动
+    private boolean isDraging;
+    private int mLastPos;
+    private long mLastPosEqualTime;
 
     // 列表项位移动画时间
-    private static final long TRANSLATE_DURATION = 150;
+    private static final long TRANSLATE_DURATION = 160;
 
     public DragGridView(Context context) {
         super(context);
@@ -53,6 +57,10 @@ public class DragGridView extends GridView implements AdapterView.OnItemLongClic
         setOnItemLongClickListener(this);
     }
 
+    private enum SlideDirection{
+        UP, DOWN, STOP
+    }
+
     @Override
     public void setAdapter(ListAdapter adapter) {
         if(adapter instanceof DragActionListener){
@@ -61,9 +69,18 @@ public class DragGridView extends GridView implements AdapterView.OnItemLongClic
         super.setAdapter(adapter);
     }
 
+    /**
+     * 默认触发滑动的时间值为100ms，此处提供自定义
+     *
+     * @param time
+     */
+    private void setTriggerDragTime(int time){
+        triggerDragTime = time;
+    }
+
     @Override
     public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-        Log.e(TAG, "i = " + i + ", l = " + l);
+        Logger.e("i = " + i + ", l = " + l);
         startDrag(i, view);
         return true;
     }
@@ -138,6 +155,8 @@ public class DragGridView extends GridView implements AdapterView.OnItemLongClic
                 mTargetPos = pos;
                 mTempPos = -1;
                 isDraging = true;
+                mLastPos = -1;
+                mLastPosEqualTime = 0;
                 if(null != mDragActionListener){
                     mDragActionListener.startDrag();
                 }
@@ -153,7 +172,20 @@ public class DragGridView extends GridView implements AdapterView.OnItemLongClic
             // 目标区域不断移动就会触发
             case DragEvent.ACTION_DRAG_LOCATION:{
                 pos = pointToPosition(dragX, dragY);
-                onDragTo(pos, mTargetPos);
+                long stayTime = 0;
+                if(mLastPos != pos){
+                    mLastPos = pos;
+                    mLastPosEqualTime = System.currentTimeMillis();
+                }else{
+                    stayTime = System.currentTimeMillis() - mLastPosEqualTime;
+                }
+
+                // 停留时间超过triggerDragTime，触发滑动
+                if(stayTime >= triggerDragTime){
+                    onDragTo(pos, mTargetPos);
+                    mLastPosEqualTime = -1;
+                }
+                slideGridView(pos);
                 break;
             }
 
@@ -191,6 +223,39 @@ public class DragGridView extends GridView implements AdapterView.OnItemLongClic
         }
         if(mTempPos >= 0 && mTempPos < getCount()){
             getChildAt(mTempPos - firstVisiblePosition).setAlpha(1.0f);
+        }
+    }
+
+    private void slideGridView(int pos){
+        int firstVisiblePosition = getFirstVisiblePosition();
+        View currentView = getChildAt(pos - firstVisiblePosition);
+        View firstView = getChildAt(0);
+        View lastView = getChildAt(getLastVisiblePosition() - firstVisiblePosition);
+        if(currentView.getTop() < firstView.getBottom()){
+            Logger.e("向上滚动");
+            postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    smoothScrollBy(-100, 16);
+                }
+            }, 50);
+        }
+
+        if(currentView.getBottom() > lastView.getTop()){
+            Logger.e("向下滚动");
+            postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    smoothScrollBy(100, 16);
+                }
+            }, 50);
+        }
+    }
+
+    private class SlideViewRunnable implements Runnable{
+        @Override
+        public void run() {
+
         }
     }
 
